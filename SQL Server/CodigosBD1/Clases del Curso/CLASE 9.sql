@@ -1,0 +1,142 @@
+--CLASE 9
+--CAMBIO DE BD
+USE master
+GO
+
+--CREAR BASE DE DATOS
+CREATE DATABASE Normalizar
+GO
+--CAMBIO DE BD
+USE Normalizar
+GO
+--CREAR LA TABLA SIN NORMALIZAR
+CREATE TABLE DBO.PACIENTE
+(
+	Nombre		NVARCHAR (50) NOT NULL,
+	Provincia	NVARCHAR (50) NOT NULL,
+	Telefonos	NVARCHAR (50) NOT NULL,
+	IDMedico	INT NOT NULL,
+	Medico		NVARCHAR (50) NOT NULL 
+);
+GO
+--CONSULTAR TABLA
+SELECT * FROM PACIENTE
+--INSERTAR DATOS 
+INSERT INTO DBO.PACIENTE
+VALUES
+	('Juan Mora', 'San José', '2222-2222 / 2222-2223', 1, 'Juan Pérez'),
+	('Carlos Montoya', 'Alajuela', '2222-2224 / 2222-2225', 1, 'Juan Pérez'),
+	('Juan Sánchez', 'Puntarenas', '2222-2226 / 2222-2227', 2, 'Mónica López'),
+	('Juan Sánchez', 'Puntarenas', '2222-2226 / 2222-2227', 2, 'Mónica López');
+GO
+--CONSULTAR TABLA
+SELECT * FROM DBO.PACIENTE
+
+--NORMALIZACIÓN DE LA BASE DE DATOS
+--CREAR NUEVAS TABLAS
+
+--CREAR TABLA MEDICO
+CREATE TABLE DBO.MEDICO
+(
+	IDMedico INT IDENTITY (1,1) NOT NULL,
+	NombreMedico NVARCHAR (50) NOT NULL
+	CONSTRAINT PK_IDMedico PRIMARY KEY (IDMedico)
+);
+GO
+--CREAR TABLA PROVINCIA
+CREATE TABLE DBO.PROVINCIA
+(
+	IDProvincia VARCHAR (3) NOT NULL,
+	NombreProvincia NVARCHAR (20) NOT NULL
+	CONSTRAINT PK_IDProvincia PRIMARY KEY (IDProvincia)
+);
+GO
+
+--INSERTAR DATOS EN LAS TABLAS MEDICO Y PROVINCIA
+INSERT INTO DBO.MEDICO (NombreMedico)
+VALUES
+	('Juan Pérez'),
+	('Mónica López');
+GO
+--
+INSERT INTO DBO.PROVINCIA (IDProvincia, NombreProvincia)
+VALUES
+	('SJ','San José'),
+	('A','Alajuela'),
+	('C','Cartago'),
+	('H','Heredia'),
+	('G','Guanacaste'),
+	('P','Puntarenas'),
+	('L','Limón');
+GO
+
+--CONSULTA TABLAS
+SELECT * FROM DBO.MEDICO
+SELECT * FROM DBO.PROVINCIA
+
+--CREAR UNA TABLA TEMPORAL --PACIENTES
+CREATE TABLE DBO.Paciente_Temporal
+(
+	IDPaciente INT IDENTITY (1,1) NOT NULL,
+	NombrePaciente NVARCHAR (50) NOT NULL,
+	ApellidoPaciente NVARCHAR (50) NOT NULL,
+	IDProvincia VARCHAR (3) NOT NULL,
+	Telefono1 NVARCHAR (50) NOT NULL,
+	Telefono2 NVARCHAR (50) NOT NULL
+	CONSTRAINT PK_IDPaciente PRIMARY KEY (IDPaciente),
+	CONSTRAINT FK_IDProvincia FOREIGN KEY (IDProvincia)
+	REFERENCES PROVINCIA (IDProvincia)
+);
+GO
+
+--CARGAR DATOS DE PACIENTE A PACIENTE TEMPORAL
+INSERT INTO Paciente_Temporal (NombrePaciente, ApellidoPaciente, IDProvincia, Telefono1,
+Telefono2)
+SELECT 
+	SUBSTRING (Nombre, 1, CHARINDEX(' ',Nombre)- 1) AS NombrePaciente,
+	SUBSTRING (Nombre, CHARINDEX(' ', Nombre)+ 1, LEN (Nombre)) AS ApellidoPaciente,
+	PRV.IDProvincia,
+	SUBSTRING (Telefonos, 1, CHARINDEX (' / ', Telefonos)) AS Telefono1,
+	SUBSTRING (Telefonos, CHARINDEX (' / ', Telefonos) + 3, LEN (Telefonos)) AS Telefono2
+FROM PACIENTE AS P
+INNER JOIN PROVINCIA AS PRV ON  P.Provincia = PRV.NombreProvincia
+
+SELECT * FROM DBO.Paciente_Temporal
+SELECT * FROM DBO.Paciente
+
+--ELIMINAR TABLA NO NORMALIZADA
+DROP TABLE PACIENTE
+
+--RENOMBRO LA TABLA Paciente_Temporal A Paciente
+EXEC SP_RENAME 'Paciente_Temporal', 'Paciente'
+
+--CREAR TABLA DE CITAS
+CREATE TABLE dbo.TurnoPaciente
+(
+	IDTurno INT IDENTITY (1,1) NOT NULL,
+	IDPaciente INT NOT NULL,
+	IDMedico INT NOT NULL,
+	FechaAtencion DATETIME NOT NULL
+	CONSTRAINT PK_IDTurno PRIMARY KEY (IDTurno),
+	CONSTRAINT FK_IDPaciente FOREIGN KEY (IDPaciente)
+	REFERENCES PACIENTE (IDPaciente),
+	CONSTRAINT FK_IDMedico FOREIGN KEY (IDMedico)
+	REFERENCES MEDICO (IDMedico)
+);
+GO
+
+SELECT * FROM DBO.Paciente
+SELECT * FROM DBO.MEDICO
+
+
+--REGISTRAR CITA
+INSERT INTO DBO.TurnoPaciente (IDPaciente,IDMedico,FechaAtencion)
+VALUES
+	(1,1,'2024-11-06 20:00'),
+	(2,2,'2024-11-06 20:00'),
+	(4,1,'2024-11-06 20:30')
+GO
+
+SELECT * FROM DBO.TurnoPaciente
+
+
